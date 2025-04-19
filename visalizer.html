@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Heap Sort Visualizer</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #bars {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      height: 400px;
+      margin-top: 30px;
+    }
+    .bar {
+      width: 25px;
+      background-color: #00adb5;
+      transition: height 0.3s, background-color 0.3s;
+    }
+    .bar.active {
+      background-color: #ff5722;
+    }
+    input, button, label {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #00adb5;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007a87;
+    }
+    input[type="range"] {
+      width: 150px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Heap Sort Visualizer</h1>
+<div>
+  <input type="text" id="arrayInput" placeholder="e.g. 5, 1, 3, 9, 2">
+  <button onclick="generateFromInput()">Generate</button>
+</div>
+<div>
+  <button onclick="previousStep()">Previous</button>
+  <button id="playPauseBtn" onclick="togglePlay()">Play</button>
+  <button onclick="nextStep()">Next</button>
+  <label>Speed: <input type="range" min="100" max="2000" step="100" value="500" id="speedRange"></label>
+</div>
+
+<div id="bars"></div>
+
+<script>
+  let values = [];
+  let steps = [];
+  let currentStep = 0;
+  let playing = false;
+  let interval = null;
+
+  const barsContainer = document.getElementById('bars');
+
+  function generateFromInput() {
+    const input = document.getElementById('arrayInput').value;
+    values = input.split(',').map(Number).filter(n => !isNaN(n));
+    steps = [];
+    currentStep = 0;
+    stopPlay();
+    precomputeHeapSortSteps([...values]);
+    renderBars(values);
+  }
+
+  function renderBars(array, active = [], sorted = []) {
+    const maxVal = Math.max(...array) || 1;
+    barsContainer.innerHTML = '';
+    array.forEach((val, i) => {
+      const barContainer = document.createElement('div');
+      barContainer.style.display = 'flex';
+      barContainer.style.flexDirection = 'column';
+      barContainer.style.alignItems = 'center';
+      barContainer.style.margin = '0 3px';
+
+      const label = document.createElement('div');
+      label.innerText = val;
+      label.style.marginBottom = '4px';
+      label.style.color = 'white';
+      label.style.fontSize = '14px';
+
+      const bar = document.createElement('div');
+      bar.classList.add('bar');
+      bar.style.height = `${(val / maxVal) * 100 + 50}px`;
+
+      if (sorted.includes(i)) {
+        bar.style.backgroundColor = '#4caf50'; // Green for sorted
+      } else if (active.includes(i)) {
+        bar.classList.add('active');
+      }
+
+      barContainer.appendChild(label);
+      barContainer.appendChild(bar);
+      barsContainer.appendChild(barContainer);
+    });
+  }
+
+  function swap(arr, i, j) {
+    const temp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = temp;
+  }
+
+  function precomputeHeapSortSteps(arr) {
+    const n = arr.length;
+
+    function heapify(n, i) {
+      let largest = i;
+      let l = 2 * i + 1;
+      let r = 2 * i + 2;
+
+      if (l < n && arr[l] > arr[largest]) largest = l;
+      if (r < n && arr[r] > arr[largest]) largest = r;
+
+      if (largest !== i) {
+        steps.push({ array: [...arr], active: [i, largest], sorted: [] });
+        swap(arr, i, largest);
+        steps.push({ array: [...arr], active: [i, largest], sorted: [] });
+        heapify(n, largest);
+      }
+    }
+
+    for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+      heapify(n, i);
+    }
+
+    for (let i = n - 1; i > 0; i--) {
+      steps.push({ array: [...arr], active: [0, i], sorted: [] });
+      swap(arr, 0, i);
+      steps.push({ array: [...arr], active: [0, i], sorted: [i] }); // Highlight final sorted position
+      heapify(i, 0);
+    }
+    steps.push({ array: [...arr], active: [], sorted: [...Array(arr.length).keys()] }); // All sorted at end
+  }
+
+  function nextStep() {
+    if (currentStep < steps.length) {
+      const step = steps[currentStep];
+      renderBars(step.array, step.active, step.sorted);
+      currentStep++;
+    }
+  }
+
+  function previousStep() {
+    if (currentStep > 1) {
+      currentStep -= 2;
+      nextStep();
+    } else if (currentStep === 1) {
+      currentStep = 0;
+      renderBars(values);
+    }
+  }
+
+  function togglePlay() {
+    if (!playing) {
+      playSorting();
+    } else {
+      stopPlay();
+    }
+  }
+
+  function playSorting() {
+    const speed = document.getElementById('speedRange').value;
+    playing = true;
+    document.getElementById('playPauseBtn').innerText = "Pause";
+    interval = setInterval(() => {
+      if (currentStep >= steps.length) {
+        stopPlay();
+        return;
+      }
+      nextStep();
+    }, speed);
+  }
+
+  function stopPlay() {
+    playing = false;
+    document.getElementById('playPauseBtn').innerText = "Play";
+    clearInterval(interval);
+  }
+
+  // Initial values for demonstration
+  values = [5, 3, 8, 4, 1, 2];
+  precomputeHeapSortSteps([...values]);
+  renderBars(values);
+</script>
+
+</body>
+</html>
